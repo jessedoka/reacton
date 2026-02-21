@@ -1,45 +1,33 @@
-import React from 'react'
+'use client'
+
 import Link from 'next/link'
-import { useRouter } from 'next/router'
-import { supabase } from '../utils/supabaseClient'
+import { usePathname } from 'next/navigation'
 
+const menu = [
+  { title: 'Test', path: '/' },
+  { title: 'About', path: '/about' },
+  { title: 'Stats', path: '/stats' },
+]
 
+export default function Sidebar() {
+  const pathname = usePathname()
 
-
-const Sidebar = () => {
-    const router = useRouter()
-
-    const session = supabase.auth.session()
-    let Login
-    session ? Login = session.user.user_metadata.full_name : Login = 'Log In'
-
-    const menu = [
-        { title: 'Test', path: '/' },
-        { title: 'About', path:'/about' },
-        { title: Login, path: '/login' },
-    ]
-
-
-    return (
-        <ul className="flex gap-4">
-            {menu.map((item, index) => {
-                return (
-                    <li key={index}>
-                        <Link href={item.path}>
-                            <a
-                                className={router.pathname === item.path
-                                    ? "bg-[#2a2a2a] text-white block px-3 py-2 rounded-md text-base"
-                                    : "text-gray-300 hover:bg-[#2a2a2a] hover:text-white block px-3 py-2 rounded-md text-base ease-in-out duration-500"
-                                }
-                            >
-                                {item.title}
-                            </a>
-                        </Link>
-                    </li>
-                )
-            })}
-        </ul>
-    )
+  return (
+    <ul className="flex gap-4">
+      {menu.map((item) => (
+        <li key={item.path}>
+          <Link
+            href={item.path}
+            className={
+              pathname === item.path
+                ? 'bg-card text-white block px-4 py-3 sm:px-3 sm:py-2 rounded-md text-base'
+                : 'text-gray-300 hover:bg-card hover:text-white block px-4 py-3 sm:px-3 sm:py-2 rounded-md text-base ease-in-out duration-500'
+            }
+          >
+            {item.title}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
 }
-
-export default Sidebar

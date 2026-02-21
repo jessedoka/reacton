@@ -1,233 +1,142 @@
+'use client'
+
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
-import { Component } from 'react'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js'
+import { Line } from 'react-chartjs-2'
 import Lightning from '../public/icons8-lightning-bolt-96.png'
 import Refresh from '../public/icons8-refresh-480.png'
-import { supabase } from '../utils/supabaseClient'
-import { Line } from 'react-chartjs-2';
-import { v4 as uuidv4 } from 'uuid';
+import { getStoredScores, setStoredScores } from '../utils/localStorage'
 
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-class Reactionbox extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-        prev: [],
-        previ: false,
-        timerOn: false,
-        timerStart: 0,
-        timerEnd: 0,
-        timerDelt: 0,
-        auto: false,
-        ready: false,
-        go: false,
-        disabled: false,
-        reacted: false,
-        trys: [],
-        tries: 0,
-        isloading: false,
-        error: false,
-        users: null,
-        width: 0, 
-        height: 0 
-    };
-        this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
+export default function Reactionbox() {
+  const [scores, setScores] = useState([])
+  const [tries, setTries] = useState(0)
+  const [lastScore, setLastScore] = useState(null)
+  const [phase, setPhase] = useState('idle') // idle | waiting | go | reacted
+  const timerStartRef = useRef(0)
+  const timeoutRef = useRef(null)
+  const [currentResult, setCurrentResult] = useState(null)
+
+  useEffect(() => {
+    const stored = getStoredScores()
+    setScores(stored.prev)
+    setTries(stored.tries)
+  }, [])
+
+  const save = useCallback((newScores, newTries) => {
+    setStoredScores({ prev: newScores, tries: newTries })
+  }, [])
+
+  const handleStart = useCallback(() => {
+    if (phase !== 'idle') return
+    setPhase('waiting')
+    const delay = 1500 + Math.random() * 2500
+    timeoutRef.current = setTimeout(() => {
+      timerStartRef.current = Date.now()
+      setPhase('go')
+    }, delay)
+  }, [phase])
+
+  const handleClick = useCallback(() => {
+    if (phase === 'go') {
+      const reactionTime = Date.now() - timerStartRef.current
+      const newScores = [...scores, reactionTime]
+      setScores(newScores)
+      setCurrentResult(reactionTime)
+      setPhase('reacted')
+      save(newScores, tries)
     }
+  }, [phase, scores, tries, save])
 
-    componentDidMount() {
-        this.updateWindowDimensions();
-        window.addEventListener('resize', this.updateWindowDimensions);
+  const handleReset = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    const newTries = tries + 1
+    setLastScore(currentResult)
+    setCurrentResult(null)
+    setTries(newTries)
+    setPhase('idle')
+    save(scores, newTries)
+  }, [tries, currentResult, scores, save])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
+  }, [])
 
-    componentWillUnmount() {
-        window.removeEventListener('resize', this.updateWindowDimensions);
-    }
+  const bgClass =
+    phase === 'reacted' ? 'bg-accent-cyan'
+    : phase === 'go' ? 'bg-accent-green'
+    : phase === 'waiting' ? 'bg-accent-red'
+    : 'bg-card'
 
-    updateWindowDimensions() {
-     this.setState({ width: window.innerWidth, height: window.innerHeight });
-    }
+  const labels = scores.map((_, i) => i)
 
-    async update({id, username, timerDelt}) {
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Reaction Time (ms)',
+        fill: false,
+        tension: 0.5,
+        backgroundColor: 'rgba(75,192,192,1)',
+        borderColor: 'rgba(78, 172, 207, 100)',
+        borderWidth: 2,
+        data: scores,
+      },
+    ],
+  }
 
-        this.setState({ isLoading: true });
-        let updates = {
-            id,
-            username,
-            timerDelt,
-            updated_at: new Date(),
-        }
+  const chartOptions = {
+    plugins: {
+      title: { display: false },
+      legend: { display: false },
+    },
+  }
 
-        try {
-            const { error, data} = await supabase
-                .from('profiles')
-                .insert([updates], {
-                    returning: 'minimal',
-                })
-            if (error) {
-                throw error;
-            }
-            this.setState({
-                users: data,
-                isLoading: false
-            });
-        } catch (error) {
-            console.log(error)
-            this.setState({
-                error,
-                isLoading: false
-            });
-        }
-    }
+  const disabled = phase === 'waiting' || phase === 'reacted'
 
-    readyState = () => {
-        this.setState({
-            ready: true,
-            disabled: true
-        })
-        setTimeout(() => {
-            this.setState({
-                go: true,
-                ready: false,
-                timerStart: Date.now(),
-                disabled: false
-            })
-        }, Math.random() * 10000)
-    }
-
-    stopTimer = () => {
-        this.setState({
-            timerOn: false,
-            timerEnd: Date.now(),
-            reacted: true
-        })
-    }
-
-    resetTimer = () => {
-        const session = supabase.auth.session()
-
-        this.setState({
-            auto: false,
-            ready: false,
-            go: false,
-            reacted: false,
-            previ: this.state.prev[this.state.prev.length - 1],
-            disabled: false,
-            tries: this.state.tries + 1,
-        })
-
-        this.state.trys.push(this.state.tries)
-
-        if (session){
-            let username = session.user.user_metadata.full_name
-            let id = uuidv4()
-            let timerDelt = this.state.prev[this.state.prev.length - 1]
-
-            console.log(session)
-            if (timerDelt != null){
-                this.update({ id, username, timerDelt })
-            }
-            
-        }
-        else {
-            return
-        } 
-    }
-
-    render() {
-        let { disabled } = this.state
-        let { prev } = this.state
-        let { previ } = this.state
-        let { timerStart } = this.state
-        let { timerEnd } = this.state
-        let { ready } = this.state
-        let { reacted } = this.state
-        let { go } = this.state // responislbe for setting image to green
-        let { auto } = this.state
-        let { tries } = this.state
-        let { trys } = this.state
-        let { timerDelt } = this.state
-        let goTime = null
-        // const { session } = this.props;
-
-        if (go === true) {
-            goTime = 'ready'
-        }
-
-        if (reacted) {
-            disabled = true
-            timerDelt = timerEnd - timerStart
-            prev.push(timerDelt)
-
-        }
-
-        // This is gets rid of most anonmylous results, but it creates duplicates, I am not sure why tho. 
-
-        const state = {
-            labels: trys, // tries
-            datasets: [
-                {
-                    label: 'Reaction',
-                    fill: false,
-                    lineTension: 0.5,
-                    backgroundColor: 'rgba(75,192,192,1)',
-                    borderColor: 'rgba(78, 172, 207, 100)',
-                    borderWidth: 2,
-                    data: [...new Set(this.state.prev)]
-                }
-            ]
-        }
-
-        return (
-            <div>
-                <div className="flex items-center flex-col">
-                    <button disabled={disabled} id={goTime} className={reacted === true ? "bg-[#4ec6cf] w-[50rem] h-[32rem] rounded-md" : go === true ? "bg-[#4ecf68] w-[50rem] h-[32rem] rounded-md" : ready === true ? "bg-[#cf4e4e] w-[50rem] h-[32rem] rounded-md" : "bg-[#2a2a2a] w-[50rem] h-[32rem] rounded-md"} onClick={go === true ? this.stopTimer : this.readyState} >
-                        {
-                            reacted || go || auto || ready == true ? '' : <Image className="hover:animate-wiggle" src={Lightning} alt="Lightning Symbol" />}
-                    </button>
-                    <div className="flex m-5 gap-10">
-                        <div className="bg-[#2a2a2a] rounded-md h-[4rem] w-[15rem] flex items-center justify-center">
-                            {previ ? previ + 'ms' : '-'}
-                        </div>
-                        <div className="bg-[#2a2a2a] rounded-md h-[4rem] w-[15rem] flex items-center justify-center">
-                            <div>
-                                {reacted === true ? timerDelt + 'ms' : '-'}
-                            </div>
-                        </div>
-                        <button className="w-[15rem] h-[4rem] bg-[#2a2a2a] rounded-md hover:bg-sky-500 ease-in-out duration-300" onClick={this.resetTimer}>
-                            <Image width={30} height={30} src={Refresh} alt="Refresh Symbol" />
-                        </button>
-                    </div>
-                </div>
-
-                <div>
-                    <div>
-                        <div className="w-1/2 mx-auto pt-4">
-                            <Line
-                                data={state}
-                                options={{
-                                    title: {
-                                        display: true,
-                                        text: 'Average Reaction Time',
-                                        fontSize: 20
-                                    },
-                                    legend: {
-                                        display: true,
-                                        position: 'right'
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        )
-    }
+  return (
+    <div>
+      <div className="flex items-center flex-col">
+        <button
+          disabled={disabled}
+          className={`${bgClass} w-full max-w-[50rem] h-[55vh] sm:h-[32rem] rounded-md flex items-center justify-center`}
+          onClick={phase === 'go' ? handleClick : handleStart}
+        >
+          {phase === 'idle' && (
+            <Image className="hover:animate-wiggle" src={Lightning} alt="Lightning Symbol" />
+          )}
+        </button>
+        <div className="flex m-5 gap-4 sm:gap-10 flex-wrap justify-center">
+          <div className="bg-card rounded-md h-[4rem] w-full sm:w-[15rem] flex items-center justify-center">
+            {lastScore ? lastScore + 'ms' : '-'}
+          </div>
+          <div className="bg-card rounded-md h-[4rem] w-full sm:w-[15rem] flex items-center justify-center">
+            {phase === 'reacted' && currentResult ? currentResult + 'ms' : '-'}
+          </div>
+          <button
+            className="w-full sm:w-[15rem] h-[4rem] bg-card rounded-md hover:bg-sky-500 ease-in-out duration-300 flex items-center justify-center"
+            onClick={handleReset}
+          >
+            <Image width={30} height={30} src={Refresh} alt="Refresh Symbol" />
+          </button>
+        </div>
+        <div className="hidden sm:block w-full max-w-[50rem] pt-4 px-4">
+          <Line data={chartData} options={chartOptions} />
+        </div>
+      </div>
+    </div>
+  )
 }
-
-export default Reactionbox
-
-
-// /* chartJS */
-
-
-

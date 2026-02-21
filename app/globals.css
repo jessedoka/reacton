@@ -2,41 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@500&display=swap');
-
-* {
-  font-family: 'Rubik', sans-serif;
-}
-
-:root{
+:root {
   --bg-colour: #242424;
   --text-colour: #d6d6d6;
-  --for-colour: #2a2a2a;
+  --card-colour: #2a2a2a;
   --red-0: #cf4e4e;
   --green-0: #4ecf68;
   --blue-0: #4ec6cf;
 }
 
 html {
-  padding: 64px
+  padding: 16px;
+}
+
+@media (min-width: 640px) {
+  html {
+    padding: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  html {
+    padding: 16px;
+  }
 }
 
 body {
-  margin: 0px;
+  margin: 0;
   background-color: var(--bg-colour);
   animation: fadein 0.3s;
 }
 
-    
-
 @keyframes fadein {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 header {
@@ -46,12 +45,7 @@ header {
   padding: 30px 10px;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
   font-size: inherit;
 }
 
@@ -60,7 +54,7 @@ li, a {
   text-decoration: none;
 }
 
-a:active{
+a:active {
   background-color: #2a2a2a;
 }
 

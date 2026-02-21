@@ -1,6 +1,6 @@
 {
   "name": "reacton",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,22 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@babel/core": "^7.15.5",
-    "@supabase/supabase-js": "^1.24.0",
-    "ansi-regex": "5.0.1",
     "autoprefixer": "^10.4.14",
-    "chart.js": "^3.5.1",
-    "next": "^12.1.0",
+    "chart.js": "^4.5.1",
+    "next": "^16.1.6",
     "postcss": "^8.4.23",
-    "react": "17.0.2",
-    "react-chartjs-2": "^3.0.5",
-    "react-dom": "17.0.2",
-    "react-top-loading-bar": "^2.0.1",
-    "tailwindcss": "^3.3.1",
-    "uuid": "^8.3.2"
+    "react": "^19.2.4",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.4",
+    "react-top-loading-bar": "^3.0.2",
+    "tailwindcss": "^3.3.1"
   },
   "devDependencies": {
-    "eslint": "7.32.0",
-    "eslint-config-next": "11.1.0"
+    "@babel/core": "^7.15.5",
+    "@eslint/eslintrc": "^3.3.1",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.1.6"
   }
 }
